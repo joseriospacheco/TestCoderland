@@ -1,0 +1,69 @@
+﻿version: '3.8'
+
+services:
+  postgresdb:
+    image: postgres:latest
+    container_name: postgres_container
+    environment:
+      POSTGRES_USER: Coderland 
+      POSTGRES_PASSWORD: Coderland
+      POSTGRES_DB: Coderland
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - webapi_network
+
+  webapi:
+    build:
+      context: ..
+      dockerfile: TestCoderland.API/Dockerfile
+    image: aspnet_webapi_image
+    container_name: aspnet_webapi_container
+    ports:
+      - "5000:5000"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: "Host=postgresdb;Database=Coderland;Username=Coderland;Password=Coderland"
+      ASPNETCORE_URLS: "http://+:5000"
+    depends_on:
+      - postgresdb
+    networks:
+      - webapi_network
+
+  migrator:
+    build:
+      context: ..
+      dockerfile: TestCoderland.API/Dockerfile
+    entrypoint: ["dotnet", "ef", "database", "update", "--verbose"]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: "Host=postgresdb;Database=Coderland;Username=Coderland;Password=Coderland"
+    depends_on:
+      - postgresdb
+    networks:
+      - webapi_network
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin_container
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgresdb
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - webapi_network
+
+volumes:
+  postgres_data:
+  pgadmin_data:
+
+networks:
+  webapi_network:
+    driver: bridge
